@@ -500,11 +500,11 @@ do
         filename_first = {
           reverse_directories = false, -- keep dirs normal order
         },
-        "smart",
+        'smart',
       },
 
       -- Layout: vertical with preview on top
-      layout_strategy = "vertical",
+      layout_strategy = 'vertical',
     },
     -- pickers = {}
     extensions = {
@@ -531,10 +531,10 @@ do
   vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
   -- Keymaps for jumping around file
-  vim.keymap.set('n', "<C-d>", "<C-d>zz")
-  vim.keymap.set('n', "<C-u>", "<C-u>zz")
-  vim.keymap.set('n', "<C-f>", "<C-f>zz")
-  vim.keymap.set('n', "<C-b>", "<C-b>zz")
+  vim.keymap.set('n', '<C-d>', '<C-d>zz')
+  vim.keymap.set('n', '<C-u>', '<C-u>zz')
+  vim.keymap.set('n', '<C-f>', '<C-f>zz')
+  vim.keymap.set('n', '<C-b>', '<C-b>zz')
 
   -- Add Telescope-based LSP pickers when an LSP attaches to a buffer.
   -- If you later switch picker plugins, this is where to update these mappings.
@@ -714,10 +714,26 @@ do
     --    https://github.com/pmizio/typescript-tools.nvim
     --
     -- But for many setups, the LSP (`ts_ls`) will work just fine
-    -- ts_ls = {},
+    ts_ls = {
+      filetypes = {
+        'javascript',
+        'javascriptreact',
+        'javascript.jsx',
+        'typescript',
+        'typescriptreact',
+        'typescript.tsx',
+      },
+    },
 
     stylua = {}, -- Used to format Lua code
-
+    graphql = {
+      filetypes = { 'graphql', 'typescriptreact', 'javascriptreact' },
+    },
+    eslint = {
+      settings = {
+        workingDirectories = { mode = 'auto' },
+      },
+    },
     -- Special Lua Config, as recommended by neovim help docs
     lua_ls = {
       on_init = function(client)
@@ -792,29 +808,45 @@ do
   vim.pack.add { gh 'stevearc/conform.nvim' }
   require('conform').setup {
     notify_on_error = false,
-    format_on_save = function(bufnr)
-      -- You can specify filetypes to autoformat on save here:
-      local enabled_filetypes = {
-        -- lua = true,
-        -- python = true,
-      }
-      if enabled_filetypes[vim.bo[bufnr].filetype] then
-        return { timeout_ms = 500 }
-      else
-        return nil
-      end
-    end,
+    -- format_on_save = function(bufnr)
+    -- -- You can specify filetypes to autoformat on save here:
+    -- local enabled_filetypes = {
+    --   lua = true,
+    --   python = true,
+    --   python = true,
+    -- }
+    -- if enabled_filetypes[vim.bo[bufnr].filetype] then
+    --   return { timeout_ms = 500 }
+    -- else
+    --   return nil
+    -- end
+    -- end,
     default_format_opts = {
       lsp_format = 'fallback', -- Use external formatters if configured below, otherwise use LSP formatting. Set to `false` to disable LSP formatting entirely.
     },
     -- You can also specify external formatters in here.
     formatters_by_ft = {
-      -- rust = { 'rustfmt' },
+      rust = { 'rustfmt' },
       -- Conform can also run multiple formatters sequentially
-      -- python = { "isort", "black" },
+      python = { 'isort', 'black' },
       --
       -- You can use 'stop_after_first' to run the first available formatter from the list
       -- javascript = { "prettierd", "prettier", stop_after_first = true },
+      javascript = { 'prettier' },
+      javascriptreact = { 'prettier' },
+      typescript = { 'prettier' },
+      typescriptreact = { 'prettier' },
+      json = { 'prettier' },
+      markdown = { 'prettier' },
+      yaml = { 'prettier' },
+      html = { 'prettier' },
+      css = { 'prettier' },
+      graphql = { 'prettier' },
+    },
+
+    format_on_save = {
+      timeout_ms = 1000,
+      lsp_fallback = true,
     },
   }
 
@@ -989,7 +1021,8 @@ do
   -- NOTE: You can add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- require 'custom.plugins'
+  --  Here, we just need to add *.lua files as needed
+  require 'custom.plugins'
 end
 
 -- The line beneath this is called `modeline`. See `:help modeline`
