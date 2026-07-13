@@ -505,8 +505,20 @@ do
 
       -- Layout: vertical with preview on top
       layout_strategy = 'vertical',
+      file_ignore_patterns = {
+        'node_modules',
+        'gql%.ts$',
+        'resolvers%.generated%.ts$',
+        'graphql%.ts$',
+        'generated%.ts$',
+        'yarn%.lock$',
+      },
     },
-    -- pickers = {}
+    pickers = {
+      find_files = {
+        hidden = true,
+      },
+    },
     extensions = {
       ['ui-select'] = { require('telescope.themes').get_dropdown() },
     },
@@ -1016,7 +1028,7 @@ do
   -- require 'kickstart.plugins.lint'
   -- require 'kickstart.plugins.autopairs'
   require 'kickstart.plugins.neo-tree'
-  -- require 'kickstart.plugins.gitsigns' -- adds gitsigns recommended keymaps
+  require 'kickstart.plugins.gitsigns' -- adds gitsigns recommended keymaps
 
   -- NOTE: You can add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --
