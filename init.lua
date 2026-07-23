@@ -184,7 +184,8 @@ do
   -- Clear highlights on search when pressing <Esc> in normal mode
   --  See `:help hlsearch`
   vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
-
+  -- Use below keymap to open new tab in neovim
+  vim.keymap.set('n', 'gt', ':tabnew<CR>', { noremap = true, silent = true })
   -- Diagnostic Config & Keymaps
   --  See `:help vim.diagnostic.Opts`
   vim.diagnostic.config {
@@ -850,10 +851,10 @@ do
       --
       -- You can use 'stop_after_first' to run the first available formatter from the list
       -- javascript = { "prettierd", "prettier", stop_after_first = true },
-      javascript = { 'prettier' },
-      javascriptreact = { 'prettier' },
-      typescript = { 'prettier' },
-      typescriptreact = { 'prettier' },
+      javascript = { 'eslint_d', 'prettier' },
+      javascriptreact = { 'eslint_d', 'prettier' },
+      typescript = { 'eslint_d', 'prettier' },
+      typescriptreact = { 'eslint_d', 'prettier' },
       json = { 'prettier' },
       markdown = { 'prettier' },
       yaml = { 'prettier' },
@@ -867,7 +868,20 @@ do
       lsp_fallback = true,
     },
   }
-
+  vim.api.nvim_create_autocmd('BufWritePre', {
+    pattern = { '*.ts', '*.tsx', '*.js', '*.jsx' },
+    callback = function()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local clients = vim.lsp.get_clients { buf = bufnr }
+      for _, client in ipairs(clients) do
+        if client.name == 'eslint' then
+          vim.b.autoformat = false
+          vim.cmd 'silent! LspEslintFixAll'
+          return
+        end
+      end
+    end,
+  })
   vim.keymap.set({ 'n', 'v' }, '<leader>f', function() require('conform').format { async = true } end, { desc = '[F]ormat buffer' })
 end
 
@@ -915,7 +929,7 @@ do
       -- <c-k>: Toggle signature help
       --
       -- See `:help blink-cmp-config-keymap` for defining your own keymap
-      preset = 'default',
+      preset = 'enter',
 
       -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
       --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
