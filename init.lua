@@ -92,6 +92,12 @@ do
   -- Enable faster startup by caching compiled Lua modules
   vim.loader.enable()
 
+  -- Disable netrw. Neo-tree is used for file browsing, and netrw would
+  -- otherwise fight with it over hijacking directory arguments
+  -- (e.g. `nvim .`). Must be set before netrw's plugin scripts load.
+  vim.g.loaded_netrw = 1
+  vim.g.loaded_netrwPlugin = 1
+
   -- Set <space> as the leader key
   -- See `:help mapleader`
   --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
