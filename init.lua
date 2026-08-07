@@ -825,36 +825,51 @@ end
 do
   -- [[ Formatting ]]
   vim.pack.add { gh 'stevearc/conform.nvim' }
+
+  local function eslint_fix_all(bufnr)
+    bufnr = bufnr or 0
+    local clients = vim.lsp.get_clients { bufnr = bufnr, name = 'eslint' }
+    if #clients == 0 then
+      vim.notify('No eslint LSP attached to this buffer', vim.log.levels.WARN)
+      return
+    end
+    local client = clients[1]
+
+    local params = {
+      textDocument = vim.lsp.util.make_text_document_params(bufnr),
+      range = {
+        start = { line = 0, character = 0 },
+        ['end'] = { line = -1, character = 0 },
+      },
+      context = {
+        diagnostics = {},
+        only = { 'source.fixAll.eslint' },
+      },
+    }
+
+    local result = client.request_sync('textDocument/codeAction', params, 1000, bufnr)
+    if not result or vim.tbl_isempty(result.result or {}) then
+      return
+    end
+
+    local action = result.result[1]
+    if action.edit then
+      vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding or 'utf-16')
+    elseif action.command then
+      client:exec_cmd(action.command)
+    end
+  end
+
   require('conform').setup {
     notify_on_error = false,
-    -- format_on_save = function(bufnr)
-    -- -- You can specify filetypes to autoformat on save here:
-    -- local enabled_filetypes = {
-    --   lua = true,
-    --   python = true,
-    --   python = true,
-    -- }
-    -- if enabled_filetypes[vim.bo[bufnr].filetype] then
-    --   return { timeout_ms = 500 }
-    -- else
-    --   return nil
-    -- end
-    -- end,
-    default_format_opts = {
-      lsp_format = 'fallback', -- Use external formatters if configured below, otherwise use LSP formatting. Set to `false` to disable LSP formatting entirely.
-    },
-    -- You can also specify external formatters in here.
+    default_format_opts = {},
     formatters_by_ft = {
       rust = { 'rustfmt' },
-      -- Conform can also run multiple formatters sequentially
       python = { 'isort', 'black' },
-      --
-      -- You can use 'stop_after_first' to run the first available formatter from the list
-      -- javascript = { "prettierd", "prettier", stop_after_first = true },
-      javascript = { 'eslint_d', 'prettier' },
-      javascriptreact = { 'eslint_d', 'prettier' },
-      typescript = { 'eslint_d', 'prettier' },
-      typescriptreact = { 'eslint_d', 'prettier' },
+      javascript = { 'prettier' },
+      javascriptreact = { 'prettier' },
+      typescript = { 'prettier' },
+      typescriptreact = { 'prettier' },
       json = { 'prettier' },
       markdown = { 'prettier' },
       yaml = { 'prettier' },
@@ -862,29 +877,21 @@ do
       css = { 'prettier' },
       graphql = { 'prettier' },
     },
+    format_on_save = function(bufnr)
+      if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then return end
 
-    format_on_save = {
-      timeout_ms = 1000,
-      lsp_fallback = true,
-    },
-  }
-  vim.api.nvim_create_autocmd('BufWritePre', {
-    pattern = { '*.ts', '*.tsx', '*.js', '*.jsx' },
-    callback = function()
-      local bufnr = vim.api.nvim_get_current_buf()
-      local clients = vim.lsp.get_clients { buf = bufnr }
-      for _, client in ipairs(clients) do
-        if client.name == 'eslint' then
-          vim.b.autoformat = false
-          vim.cmd 'silent! LspEslintFixAll'
-          return
-        end
-      end
+      return {
+        timeout_ms = 1000,
+      }
     end,
-  })
+  }
+
+  -- Manual eslint fix-all
+  vim.keymap.set({ 'n', 'v' }, '<leader>e', function() eslint_fix_all(0) end, { desc = '[E]slint fix buffer' })
+
+  -- Manual prettier format
   vim.keymap.set({ 'n', 'v' }, '<leader>f', function() require('conform').format { async = true } end, { desc = '[F]ormat buffer' })
 end
-
 -- ============================================================
 -- SECTION 8: AUTOCOMPLETE & SNIPPETS
 -- blink.cmp and luasnip setup
