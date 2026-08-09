@@ -13,6 +13,7 @@ In addition to the kickstart.nvim defaults, this config adds:
 | [hotreload.nvim](https://github.com/diogo464/hotreload.nvim) | Auto-reload buffer on file changes |
 | [smear-cursor.nvim](https://github.com/sphamba/smear-cursor.nvim) | Animated cursor |
 | [twilight.nvim](https://github.com/folke/twilight.nvim) | Dim inactive code for focus |
+| [autoclose.nvim](https://github.com/m4xshen/autoclose.nvim) | Auto-close brackets/quotes |
 | [indent-blankline.nvim](https://github.com/lukas-reineke/indent-blankline.nvim) | Indentation guides |
 | [neo-tree.nvim](https://github.com/nvim-neo-tree/neo-tree.nvim) | File explorer |
 
