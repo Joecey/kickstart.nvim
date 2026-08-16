@@ -392,12 +392,18 @@ do
   vim.pack.add { gh 'folke/tokyonight.nvim' }
   vim.pack.add { gh 'rebelot/kanagawa.nvim' }
   ---@diagnostic disable-next-line: missing-fields
-  require('kanagawa').setup()
+  
+  vim.pack.add({ src =  "https://github.com/mryodo/rwth.nvim" })
+  require("rwth").setup({
+    transparent = false,
+    minipickstyle = true, 
+    minifilesstyle = true, 
+  })
 
   -- Load the colorscheme here.
   -- Like many other themes, this one has different styles, and you could load
   -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-  vim.cmd.colorscheme 'kanagawa'
+  vim.cmd.colorscheme 'rwth-dark'
 
   -- Highlight todo, notes, etc in comments
   vim.pack.add { gh 'folke/todo-comments.nvim' }
