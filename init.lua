@@ -391,9 +391,8 @@ do
   -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
   vim.pack.add { gh 'folke/tokyonight.nvim' }
   vim.pack.add { gh 'rebelot/kanagawa.nvim' }
-  ---@diagnostic disable-next-line: missing-fields
   
-  vim.pack.add({ src =  "https://github.com/mryodo/rwth.nvim" })
+  vim.pack.add { gh "mryodo/rwth.nvim" }
   require("rwth").setup({
     transparent = false,
     minipickstyle = true, 
