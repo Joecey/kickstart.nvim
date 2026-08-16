@@ -8,7 +8,7 @@ In addition to the kickstart.nvim defaults, this config adds:
 
 | Plugin | Description |
 | --- | --- |
-| [kanagawa.nvim](https://github.com/rebelot/kanagawa.nvim) | Colorscheme |
+| [rwth.nvim](https://github.com/mryodo/rwth.nvim) | Colorscheme |
 | [flash.nvim](https://github.com/folke/flash.nvim) | Jump/motion search |
 | [hotreload.nvim](https://github.com/diogo464/hotreload.nvim) | Auto-reload buffer on file changes |
 | [smear-cursor.nvim](https://github.com/sphamba/smear-cursor.nvim) | Animated cursor |
