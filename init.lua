@@ -390,20 +390,19 @@ do
   --
   -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
   -- Uncomment themes as needed 
-  -- vim.pack.add { gh 'folke/tokyonight.nvim' }
+  vim.pack.add { gh 'folke/tokyonight.nvim' }
   -- vim.pack.add { gh 'rebelot/kanagawa.nvim' }
-  
-  vim.pack.add { gh "mryodo/rwth.nvim" }
-  require("rwth").setup({
-    transparent = false,
-    minipickstyle = true, 
-    minifilesstyle = true, 
-  })
+  -- vim.pack.add { gh "mryodo/rwth.nvim" }
+  -- require("rwth").setup({
+  --   transparent = false,
+  --   minipickstyle = true, 
+  --   minifilesstyle = true, 
+  -- })
 
   -- Load the colorscheme here.
   -- Like many other themes, this one has different styles, and you could load
   -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-  vim.cmd.colorscheme 'rwth-dark'
+  vim.cmd.colorscheme 'tokyonight-storm'
 
   -- Highlight todo, notes, etc in comments
   vim.pack.add { gh 'folke/todo-comments.nvim' }
@@ -750,14 +749,42 @@ do
       },
     },
 
+    -- oxlint: diagnostics on save (run = 'onSave'). Manual fix-all via :LspOxlintFixAll.
+    -- root_dir overridden to use .git or package.json as fallback, since oxlint
+    -- is installed globally and may not be listed in package.json deps.
+    oxlint = {
+      settings = {
+        run = 'onSave',
+      },
+      root_dir = function(bufnr, on_dir)
+        local fname = vim.api.nvim_buf_get_name(bufnr)
+        local root = vim.fs.dirname(vim.fs.find({ '.oxlintrc.json', '.oxlintrc.jsonc', 'oxlint.config.ts', 'package.json', '.git' }, { path = fname, upward = true })[1])
+        if root then on_dir(root) end
+      end,
+    },
+
+    -- oxfmt: formatter for JS/TS, invoked on save via BufWritePre autocmd below.
+    -- Same root_dir override as oxlint.
+    oxfmt = {
+      filetypes = {
+        'javascript',
+        'javascriptreact',
+        'javascript.jsx',
+        'typescript',
+        'typescriptreact',
+        'typescript.tsx',
+        'astro',
+      },
+      root_dir = function(bufnr, on_dir)
+        local fname = vim.api.nvim_buf_get_name(bufnr)
+        local root = vim.fs.dirname(vim.fs.find({ '.oxfmtrc.json', '.oxfmtrc.jsonc', 'oxfmt.config.ts', 'package.json', '.git' }, { path = fname, upward = true })[1])
+        if root then on_dir(root) end
+      end,
+    },
+
     stylua = {}, -- Used to format Lua code
     graphql = {
       filetypes = { 'graphql', 'typescriptreact', 'javascriptreact' },
-    },
-    eslint = {
-      settings = {
-        workingDirectories = { mode = 'auto' },
-      },
     },
     -- Special Lua Config, as recommended by neovim help docs
     lua_ls = {
@@ -811,7 +838,8 @@ do
   --    :Mason
   --
   -- You can press `g?` for help in this menu.
-  local ensure_installed = vim.tbl_keys(servers or {})
+  -- oxlint and oxfmt are installed globally outside Mason; exclude them.
+  local ensure_installed = vim.tbl_filter(function(name) return name ~= 'oxlint' and name ~= 'oxfmt' end, vim.tbl_keys(servers or {}))
   vim.list_extend(ensure_installed, {
     -- You can add other tools here that you want Mason to install
   })
@@ -832,50 +860,12 @@ do
   -- [[ Formatting ]]
   vim.pack.add { gh 'stevearc/conform.nvim' }
 
-  local function eslint_fix_all(bufnr)
-    bufnr = bufnr or 0
-    local clients = vim.lsp.get_clients { bufnr = bufnr, name = 'eslint' }
-    if #clients == 0 then
-      vim.notify('No eslint LSP attached to this buffer', vim.log.levels.WARN)
-      return
-    end
-    local client = clients[1]
-
-    local params = {
-      textDocument = vim.lsp.util.make_text_document_params(bufnr),
-      range = {
-        start = { line = 0, character = 0 },
-        ['end'] = { line = -1, character = 0 },
-      },
-      context = {
-        diagnostics = {},
-        only = { 'source.fixAll.eslint' },
-      },
-    }
-
-    local result = client.request_sync('textDocument/codeAction', params, 1000, bufnr)
-    if not result or vim.tbl_isempty(result.result or {}) then
-      return
-    end
-
-    local action = result.result[1]
-    if action.edit then
-      vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding or 'utf-16')
-    elseif action.command then
-      client:exec_cmd(action.command)
-    end
-  end
-
   require('conform').setup {
     notify_on_error = false,
     default_format_opts = {},
     formatters_by_ft = {
       rust = { 'rustfmt' },
       python = { 'isort', 'black' },
-      javascript = { 'prettier' },
-      javascriptreact = { 'prettier' },
-      typescript = { 'prettier' },
-      typescriptreact = { 'prettier' },
       json = { 'prettier' },
       markdown = { 'prettier' },
       yaml = { 'prettier' },
@@ -883,20 +873,32 @@ do
       css = { 'prettier' },
       graphql = { 'prettier' },
     },
-    format_on_save = function(bufnr)
-      if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then return end
-
-      return {
-        timeout_ms = 1000,
-      }
-    end,
   }
 
-  -- Manual eslint fix-all
-  vim.keymap.set({ 'n', 'v' }, '<leader>e', function() eslint_fix_all(0) end, { desc = '[E]slint fix buffer' })
+  -- Format JS/TS files on save using the oxfmt LSP client.
+  -- oxfmt is configured as an LSP server above; this autocmd triggers
+  -- LSP formatting (filtered to oxfmt only) before writing the buffer.
+  vim.api.nvim_create_autocmd('BufWritePre', {
+    group = vim.api.nvim_create_augroup('oxfmt-format-on-save', { clear = true }),
+    pattern = { '*.js', '*.jsx', '*.ts', '*.tsx', '*.astro' },
+    callback = function(event)
+      vim.lsp.buf.format { bufnr = event.buf, filter = function(client) return client.name == 'oxfmt' end }
+    end,
+  })
 
-  -- Manual prettier format
-  vim.keymap.set({ 'n', 'v' }, '<leader>f', function() require('conform').format { async = true } end, { desc = '[F]ormat buffer' })
+  -- Manual oxlint fix-all (oxc.fixAll). The lspconfig oxlint config also
+  -- provides the :LspOxlintFixAll buffer command; this keymap wraps it.
+  vim.keymap.set({ 'n', 'v' }, '<leader>e', '<cmd>LspOxlintFixAll<CR>', { desc = '[E]slint fix buffer (oxlint)' })
+
+  -- Manual format: conform first (non-JS/TS filetypes), fall back to LSP (oxfmt for JS/TS)
+  vim.keymap.set({ 'n', 'v' }, '<leader>f', function()
+    local ok, conform = pcall(require, 'conform')
+    if ok and conform.list_formatters_for_buffer(0) ~= nil and #conform.list_formatters_for_buffer(0) > 0 then
+      conform.format { async = true }
+    else
+      vim.lsp.buf.format { async = true }
+    end
+  end, { desc = '[F]ormat buffer' })
 end
 -- ============================================================
 -- SECTION 8: AUTOCOMPLETE & SNIPPETS

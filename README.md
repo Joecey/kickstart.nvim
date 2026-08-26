@@ -27,6 +27,7 @@ In addition to the kickstart.nvim defaults, this config adds:
 - Clipboard tool (xclip/xsel on Linux, win32yank on Windows, built-in on Mac)
 - A [Nerd Font](https://www.nerdfonts.com/) (optional, for icons)
 - Language tooling as needed (e.g. `npm` for TypeScript, `go` for Golang)
+- [oxlint](https://oxc.rs/docs/guide/usage/linter.html) and [oxfmt](https://oxc.rs/docs/guide/usage/formatter.html) — the default linter and formatter for JavaScript/TypeScript/JSX/TSX/Astro. Both must be installed globally and available on your `PATH`.
 
 ## Installation
 
