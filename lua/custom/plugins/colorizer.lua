@@ -1,0 +1,12 @@
+vim.pack.add { 'https://github.com/catgoose/nvim-colorizer.lua' }
+
+require('colorizer').setup {
+  user_default_options = {
+    RGB = true,
+    RRGGBB = true,
+    RRGGBBAA = true,
+    names = false,
+    css = false,
+    mode = 'background',
+  },
+}
