@@ -732,7 +732,7 @@ do
     -- clangd = {},
     -- gopls = {},
     -- pyright = {},
-    -- rust_analyzer = {},
+    rust_analyzer = {},
     --
     -- Some languages (like typescript) have entire language plugins that can be useful:
     --    https://github.com/pmizio/typescript-tools.nvim
@@ -841,7 +841,7 @@ do
   -- oxlint and oxfmt are installed globally outside Mason; exclude them.
   local ensure_installed = vim.tbl_filter(function(name) return name ~= 'oxlint' and name ~= 'oxfmt' end, vim.tbl_keys(servers or {}))
   vim.list_extend(ensure_installed, {
-    -- You can add other tools here that you want Mason to install
+    'rustfmt', -- Rust formatter (used by conform.nvim)
   })
 
   require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -863,6 +863,9 @@ do
   require('conform').setup {
     notify_on_error = false,
     default_format_opts = {},
+    format_on_save = function(bufnr)
+      if vim.bo[bufnr].filetype == 'rust' then return {} end
+    end,
     formatters_by_ft = {
       rust = { 'rustfmt' },
       python = { 'isort', 'black' },
