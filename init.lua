@@ -171,6 +171,9 @@ do
   -- instead raise a dialog asking if you wish to save the current file(s)
   -- See `:help 'confirm'`
   vim.o.confirm = true
+
+  -- Show the filename at the top of each window (relative path, modified, readonly)
+  vim.o.winbar = ' %f%m%r'
 end
 
 -- ============================================================
@@ -445,8 +448,50 @@ do
   --  You could remove this setup call if you don't like it,
   --  and try some other statusline plugin
   local statusline = require 'mini.statusline'
-  -- Set `use_icons` to true if you have a Nerd Font
-  statusline.setup { use_icons = vim.g.have_nerd_font }
+
+  -- Formatter(s) that will run on the current buffer: conform.nvim formatters
+  -- (rustfmt, prettier, ...), else formatting-capable LSP clients (e.g. oxfmt).
+  local function section_formatter()
+    if statusline.is_truncated(75) then return '' end
+    local ok, conform = pcall(require, 'conform')
+    local names = {}
+    if ok then
+      local formatters, use_lsp = conform.list_formatters_to_run(0)
+      names = vim.tbl_map(function(f) return f.name end, formatters)
+      if #names > 0 and not use_lsp then return 'fmt: ' .. table.concat(names, ',') end
+    end
+    for _, client in ipairs(vim.lsp.get_clients { bufnr = 0 }) do
+      if client:supports_method 'textDocument/formatting' then table.insert(names, client.name) end
+    end
+    if #names == 0 then return '' end
+    return 'fmt: ' .. table.concat(names, ',')
+  end
+
+  statusline.setup {
+    use_icons = vim.g.have_nerd_font,
+    content = {
+      active = function()
+        local mode, mode_hl = statusline.section_mode { trunc_width = 120 }
+        local git = statusline.section_git { trunc_width = 40 }
+        local diff = statusline.section_diff { trunc_width = 75 }
+        local diagnostics = statusline.section_diagnostics { trunc_width = 75 }
+        local lsp = statusline.section_lsp { trunc_width = 75 }
+        local fileinfo = statusline.section_fileinfo { trunc_width = 120 }
+        local formatter = section_formatter()
+        local location = statusline.section_location { trunc_width = 75 }
+        local search = statusline.section_searchcount { trunc_width = 75 }
+
+        return statusline.combine_groups {
+          { hl = mode_hl, strings = { mode } },
+          { hl = 'MiniStatuslineDevinfo', strings = { git, diff, diagnostics, lsp } },
+          '%<', -- Mark general truncate point
+          '%=', -- End left alignment
+          { hl = 'MiniStatuslineFileinfo', strings = { fileinfo, formatter } },
+          { hl = mode_hl, strings = { search, location } },
+        }
+      end,
+    },
+  }
 
   -- You can configure sections in the statusline by overriding their
   -- default behavior. For example, here we set the section for
@@ -839,10 +884,8 @@ do
   --
   -- You can press `g?` for help in this menu.
   -- oxlint and oxfmt are installed globally outside Mason; exclude them.
+  -- rustfmt is managed by rustup (not in Mason registry); conform.nvim finds it on PATH.
   local ensure_installed = vim.tbl_filter(function(name) return name ~= 'oxlint' and name ~= 'oxfmt' end, vim.tbl_keys(servers or {}))
-  vim.list_extend(ensure_installed, {
-    'rustfmt', -- Rust formatter (used by conform.nvim)
-  })
 
   require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
