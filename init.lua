@@ -1059,6 +1059,10 @@ do
   -- NOTE: You can also specify a branch or a specific commit
   vim.pack.add { { src = gh 'nvim-treesitter/nvim-treesitter', version = 'main' } }
 
+  -- On Windows the tree-sitter CLI defaults to MSVC's cl.exe; fall back to gcc (MinGW)
+  -- when cl.exe isn't available, otherwise every parser fails to compile.
+  if vim.fn.has 'win32' == 1 and not vim.env.CC and vim.fn.executable 'cl' == 0 and vim.fn.executable 'gcc' == 1 then vim.env.CC = 'gcc' end
+
   -- Ensure basic parsers are installed
   local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'svelte', 'javascript', 'typescript', 'css' }
   require('nvim-treesitter').install(parsers)
