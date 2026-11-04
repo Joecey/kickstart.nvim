@@ -827,6 +827,11 @@ do
       end,
     },
 
+    -- svelte: svelte-language-server. Prefers the project's node_modules/.bin/svelteserver
+    -- if present. lspconfig's defaults already re-sync .js/.ts saves and add :LspMigrateToSvelte5.
+    -- oxlint (above) already lints the <script> blocks of .svelte files.
+    svelte = {},
+
     stylua = {}, -- Used to format Lua code
     graphql = {
       filetypes = { 'graphql', 'typescriptreact', 'javascriptreact' },
@@ -907,10 +912,14 @@ do
     notify_on_error = false,
     default_format_opts = {},
     format_on_save = function(bufnr)
-      if vim.bo[bufnr].filetype == 'rust' then return {} end
+      local ft = vim.bo[bufnr].filetype
+      if ft == 'rust' or ft == 'svelte' then return {} end
     end,
     formatters_by_ft = {
       rust = { 'rustfmt' },
+      -- oxfmt can't format .svelte yet; conform uses the project's local prettier,
+      -- which picks up prettier-plugin-svelte from the project's prettier config.
+      svelte = { 'prettier' },
       python = { 'isort', 'black' },
       json = { 'prettier' },
       markdown = { 'prettier' },
@@ -1050,8 +1059,12 @@ do
   -- NOTE: You can also specify a branch or a specific commit
   vim.pack.add { { src = gh 'nvim-treesitter/nvim-treesitter', version = 'main' } }
 
+  -- On Windows the tree-sitter CLI defaults to MSVC's cl.exe; fall back to gcc (MinGW)
+  -- when cl.exe isn't available, otherwise every parser fails to compile.
+  if vim.fn.has 'win32' == 1 and not vim.env.CC and vim.fn.executable 'cl' == 0 and vim.fn.executable 'gcc' == 1 then vim.env.CC = 'gcc' end
+
   -- Ensure basic parsers are installed
-  local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+  local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'svelte', 'javascript', 'typescript', 'css' }
   require('nvim-treesitter').install(parsers)
 
   ---@param buf integer
