@@ -770,6 +770,30 @@ do
     end,
   })
 
+  -- TypeScript 7 (native Go port) ships no tsserver.js, so ts_ls can't use it; its own
+  -- `tsc --lsp --stdio` is the language server instead. Projects with TS 7 installed
+  -- (as `typescript` or the `typescript7` alias) get tsgo, everything else gets ts_ls.
+  local ts_root_markers = { { 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb', 'bun.lock' }, { '.git' } }
+
+  --- Nearest TypeScript >= 7 `tsc` binary in a node_modules dir above `path`, or nil.
+  ---@param path string
+  ---@return string?
+  local function find_ts7_tsc(path)
+    local node_modules = vim.fs.find('node_modules', { path = path, upward = true, type = 'directory', limit = math.huge })
+    local candidates = vim.iter(node_modules):map(function(dir) return { vim.fs.joinpath(dir, 'typescript7'), vim.fs.joinpath(dir, 'typescript') } end):flatten():totable()
+    return vim.iter(candidates):map(function(pkg_dir)
+      local ok, lines = pcall(vim.fn.readfile, vim.fs.joinpath(pkg_dir, 'package.json'))
+      if not ok then return nil end
+      local pkg_ok, pkg = pcall(vim.json.decode, table.concat(lines, '\n'))
+      local major = pkg_ok and tonumber(tostring(pkg.version or ''):match '^(%d+)')
+      local tsc = vim.fs.joinpath(pkg_dir, 'bin', 'tsc')
+      return major and major >= 7 and vim.uv.fs_stat(tsc) and tsc or nil
+    end):find(function(tsc) return tsc ~= nil end)
+  end
+
+  ---@param bufnr integer
+  local function buf_dir(bufnr) return vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr)) end
+
   -- Enable the following language servers
   --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
   --  See `:help lsp-config` for information about keys and how to configure
@@ -793,6 +817,24 @@ do
         'typescriptreact',
         'typescript.tsx',
       },
+      -- Skip projects on TypeScript 7; tsgo (below) handles those.
+      root_dir = function(bufnr, on_dir)
+        if find_ts7_tsc(buf_dir(bufnr)) then return end
+        on_dir(vim.fs.root(bufnr, ts_root_markers) or vim.fn.getcwd())
+      end,
+    },
+
+    -- tsgo: TypeScript 7's built-in language server, run from the project's own install.
+    -- Not installed via Mason; only attaches when the project has TS 7.
+    tsgo = {
+      cmd = function(dispatchers, config)
+        local tsc = find_ts7_tsc(config.root_dir)
+        return vim.lsp.rpc.start({ 'node', tsc, '--lsp', '--stdio' }, dispatchers)
+      end,
+      root_dir = function(bufnr, on_dir)
+        if not find_ts7_tsc(buf_dir(bufnr)) then return end
+        on_dir(vim.fs.root(bufnr, ts_root_markers) or vim.fn.getcwd())
+      end,
     },
 
     -- oxlint: diagnostics on save (run = 'onSave'). Manual fix-all via :LspOxlintFixAll.
@@ -890,8 +932,10 @@ do
   --
   -- You can press `g?` for help in this menu.
   -- oxlint and oxfmt are installed globally outside Mason; exclude them.
+  -- tsgo runs from each project's own TypeScript 7 install; exclude it too.
   -- rustfmt is managed by rustup (not in Mason registry); conform.nvim finds it on PATH.
-  local ensure_installed = vim.tbl_filter(function(name) return name ~= 'oxlint' and name ~= 'oxfmt' end, vim.tbl_keys(servers or {}))
+  local not_from_mason = { oxlint = true, oxfmt = true, tsgo = true }
+  local ensure_installed = vim.tbl_filter(function(name) return not not_from_mason[name] end, vim.tbl_keys(servers or {}))
 
   require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
