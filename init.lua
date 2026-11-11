@@ -394,8 +394,8 @@ do
   --
   -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
   -- Uncomment themes as needed 
-  vim.pack.add { gh 'folke/tokyonight.nvim' }
-  -- vim.pack.add { gh 'rebelot/kanagawa.nvim' }
+  -- vim.pack.add { gh 'folke/tokyonight.nvim' }
+  vim.pack.add { gh 'rebelot/kanagawa.nvim' }
   -- vim.pack.add { gh "mryodo/rwth.nvim" }
   -- require("rwth").setup({
   --   transparent = false,
@@ -405,8 +405,9 @@ do
 
   -- Load the colorscheme here.
   -- Like many other themes, this one has different styles, and you could load
-  -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-  vim.cmd.colorscheme 'tokyonight-storm'
+  -- any other, such as 'kanagawa-wave', 'kanagawa-dragon', or 'kanagawa-lotus'.
+  -- kanagawa-wave matches the iTerm2 profile colors.
+  vim.cmd.colorscheme 'kanagawa-wave'
 
   -- Highlight todo, notes, etc in comments
   vim.pack.add { gh 'folke/todo-comments.nvim' }
