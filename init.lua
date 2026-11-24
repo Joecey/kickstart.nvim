@@ -944,6 +944,41 @@ do
     vim.lsp.config(name, server)
     vim.lsp.enable(name)
   end
+
+  -- TS servers only offer auto-imports from files they know about. Brand-new files
+  -- reach them via workspace/didChangeWatchedFiles, which can lag or be missed, so
+  -- tell them directly the first time a new file is written.
+  local ts_clients = { ts_ls = true, tsgo = true }
+  local function notify_ts_created(path)
+    local change = { changes = { { uri = vim.uri_from_fname(path), type = vim.lsp.protocol.FileChangeType.Created } } }
+    vim
+      .iter(vim.lsp.get_clients())
+      :filter(function(client) return ts_clients[client.name] end)
+      :each(function(client) client:notify('workspace/didChangeWatchedFiles', change) end)
+  end
+
+  local ts_new_file = vim.api.nvim_create_augroup('ts-new-file-notify', { clear = true })
+  vim.api.nvim_create_autocmd('BufNewFile', {
+    group = ts_new_file,
+    pattern = { '*.ts', '*.tsx', '*.js', '*.jsx', '*.mts', '*.cts' },
+    callback = function(event) vim.b[event.buf].ts_is_new_file = true end,
+  })
+  vim.api.nvim_create_autocmd('BufWritePost', {
+    group = ts_new_file,
+    pattern = { '*.ts', '*.tsx', '*.js', '*.jsx', '*.mts', '*.cts' },
+    callback = function(event)
+      if not vim.b[event.buf].ts_is_new_file then return end
+      vim.b[event.buf].ts_is_new_file = nil
+      notify_ts_created(vim.api.nvim_buf_get_name(event.buf))
+    end,
+  })
+
+  -- Fallback: restart whichever TS server is running (rebuilds its project + auto-import index).
+  vim.keymap.set('n', '<leader>gt', function()
+    local names = vim.iter(vim.lsp.get_clients()):map(function(client) return client.name end):filter(function(name) return ts_clients[name] end):totable()
+    if #names == 0 then return vim.notify('No TypeScript server running', vim.log.levels.WARN) end
+    vim.cmd('lsp restart ' .. table.concat(names, ' '))
+  end, { desc = 'Restart [T]ypeScript server' })
 end
 
 -- ============================================================
